@@ -4,15 +4,19 @@ services:
     restart: unless-stopped
     expose:
       - "3000"
+    environment:
+      - ADMIN_KEY=${ADMIN_KEY:-olimpija2025}
     labels:
       - "traefik.enable=true"
       # HTTPS router
       - "traefik.http.routers.kviz.rule=Host(`kahoot.mihaperpar.com`)"
       - "traefik.http.routers.kviz.entrypoints=websecure"
       - "traefik.http.routers.kviz.tls.certresolver=letsencrypt"
-      # HTTP router (needed for ACME challenge + redirect)
+      # HTTP router (ACME + redirect to HTTPS)
       - "traefik.http.routers.kviz-http.rule=Host(`kahoot.mihaperpar.com`)"
       - "traefik.http.routers.kviz-http.entrypoints=web"
+      - "traefik.http.routers.kviz-http.middlewares=kviz-redirect"
+      - "traefik.http.middlewares.kviz-redirect.redirectscheme.scheme=https"
       # Service
       - "traefik.http.services.kviz.loadbalancer.server.port=3000"
     networks:

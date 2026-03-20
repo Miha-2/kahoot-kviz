@@ -13,6 +13,7 @@ const { WebSocketServer } = require('ws');
 
 // ── Config ──
 const PORT = process.env.PORT || 3000;
+const ADMIN_KEY = process.env.ADMIN_KEY || 'olimpija2025';
 
 // ── Quiz questions (single source of truth) ──
 const QUIZ_CONFIG = {
@@ -110,6 +111,23 @@ const server = http.createServer((req, res) => {
             res.writeHead(500);
             res.end('QR module not available');
         }
+        return;
+    }
+
+    // API endpoint: reset game via URL
+    // Usage: /api/reset?key=YOUR_ADMIN_KEY
+    if (req.url.startsWith('/api/reset')) {
+        const urlObj = new URL(req.url, `http://${req.headers.host}`);
+        const key = urlObj.searchParams.get('key');
+        if (key !== ADMIN_KEY) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid key' }));
+            return;
+        }
+        resetGame();
+        console.log('[Admin] Game reset via API');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, message: 'Game reset. All players cleared.' }));
         return;
     }
 
