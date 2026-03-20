@@ -1,0 +1,13 @@
+{
+  "name": "kviz-server",
+  "version": "1.0.0",
+  "description": "Kahoot-style quiz server with WebSocket",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.3",
+    "ws": "^8.16.0"
+  }
+}

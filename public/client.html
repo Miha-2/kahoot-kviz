@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="sl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>Kviz — Igralec</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #2EB279;
+            --accent-hover: #1F8F62;
+            --accent-glow: rgba(46, 178, 121, 0.25);
+            --text: #e6fff7;
+            --muted: #bfdad2;
+            --dim: #7A8B85;
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(46, 178, 121, 0.15);
+            --correct: #2EB279;
+            --correct-bg: rgba(46, 178, 121, 0.15);
+            --wrong: #E85454;
+            --wrong-bg: rgba(232, 84, 84, 0.12);
+            --option-bg: rgba(255, 255, 255, 0.06);
+            --option-border: rgba(255, 255, 255, 0.12);
+            --option-hover: rgba(255, 255, 255, 0.10);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body {
+            font-family: 'Barlow', 'Helvetica Neue', sans-serif;
+            color: var(--text);
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+        .bg-fixed {
+            position: fixed; inset: 0;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            z-index: 0;
+        }
+        .bg-overlay {
+            position: fixed; inset: 0;
+            background: linear-gradient(160deg, rgba(4,22,14,0.82) 0%, rgba(7,35,22,0.75) 50%, rgba(4,22,14,0.88) 100%);
+            z-index: 1;
+        }
+        .wrap {
+            position: relative; z-index: 2;
+            max-width: 520px; margin: 0 auto;
+            padding: 2rem 16px 3rem;
+            min-height: 100dvh;
+            display: flex; flex-direction: column;
+        }
+
+        /* ─── SCREENS ─── */
+        .screen { display: none; flex-direction: column; flex: 1; }
+        .screen.active { display: flex; }
+
+        /* ─── JOIN SCREEN ─── */
+        .join-screen { align-items: center; justify-content: center; text-align: center; }
+        .join-screen h1 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(28px, 7vw, 40px); font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.03em;
+            margin-bottom: 6px;
+        }
+        .join-screen .sub {
+            color: var(--muted); font-size: clamp(14px, 3.5vw, 16px);
+            margin-bottom: 2rem;
+        }
+        .join-card {
+            width: 100%;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 18px; padding: 24px 20px;
+        }
+        .join-card .cta { margin-top: 12px; }
+        .join-card .field span {
+            display: block; margin-bottom: .5rem; padding-left: .6rem;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 15px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+        .join-card input {
+            width: 100%;
+            padding: clamp(12px, 3vw, 16px) clamp(14px, 4vw, 16px);
+            border-radius: 999px;
+            border: 1.5px solid rgba(46,178,121,0.4);
+            background: rgba(255,255,255,0.95);
+            color: #111;
+            font-family: 'Barlow', sans-serif;
+            font-size: 16px;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .join-card input:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .join-card input::placeholder { color: #7A8B85; }
+
+        .cta {
+            width: 100%; padding: 14px 16px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 18px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: white; background: var(--accent);
+            border: 0; border-radius: 999px; cursor: pointer;
+            transition: background 0.2s, transform 0.08s;
+        }
+        .cta:hover { filter: brightness(1.05); }
+        .cta:active { transform: translateY(1px); background: var(--accent-hover); }
+
+        .conn-info {
+            margin-top: 16px;
+            font-size: 13px; color: var(--dim);
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .conn-info .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--wrong); transition: background 0.3s;
+        }
+        .conn-info .dot.ok { background: var(--correct); }
+
+        /* ─── WAITING SCREEN ─── */
+        .waiting-screen { align-items: center; justify-content: center; text-align: center; }
+        .waiting-screen h2 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(24px, 6vw, 34px); font-weight: 900;
+            text-transform: uppercase; margin-bottom: 8px;
+        }
+        .waiting-screen .sub { color: var(--muted); font-size: 16px; }
+        .waiting-dots {
+            display: flex; gap: 8px; justify-content: center; margin-top: 24px;
+        }
+        .waiting-dots span {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--accent); animation: pulse 1.2s ease infinite;
+        }
+        .waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
+
+        /* ─── QUESTION SCREEN ─── */
+        .progress-wrap { margin-bottom: 1rem; }
+        .progress-info {
+            display: flex; justify-content: space-between; align-items: center;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 14px; font-weight: 600;
+            letter-spacing: 0.06em; text-transform: uppercase;
+            color: var(--muted); margin-bottom: 8px;
+        }
+        .progress-bar {
+            width: 100%; height: 6px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 999px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: var(--accent);
+            border-radius: 999px;
+            transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
+        }
+
+        .card {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 18px; padding: 20px 18px; margin-bottom: 1rem;
+        }
+        .card-enter { animation: fadeSlideIn 0.45s ease forwards; }
+        .question-number {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 13px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--accent); margin-bottom: 8px;
+        }
+        .question-text {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(20px, 5vw, 26px); font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.02em;
+            line-height: 1.25;
+        }
+
+        .timer-bar {
+            width: 100%; height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 999px; overflow: hidden;
+            margin-bottom: 12px; display: none;
+        }
+        .timer-fill {
+            height: 100%; background: var(--accent);
+            border-radius: 999px;
+            transition: width 0.1s linear;
+        }
+        .timer-fill.warning { background: #FFB830; }
+        .timer-fill.danger { background: var(--wrong); }
+
+        .options { display: grid; gap: 10px; }
+        .option-btn {
+            position: relative; width: 100%;
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 18px;
+            background: var(--option-bg);
+            border: 1.5px solid var(--option-border);
+            border-radius: 14px; color: var(--text);
+            font-family: 'Barlow', sans-serif;
+            font-size: clamp(14px, 3.8vw, 16px); font-weight: 500;
+            cursor: pointer; transition: all 0.25s ease;
+            text-align: left; overflow: hidden;
+        }
+        .option-btn:hover:not(.locked) {
+            background: var(--option-hover);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+        }
+        .option-btn:active:not(.locked) { transform: translateY(0); }
+        .option-letter {
+            flex-shrink: 0; width: 32px; height: 32px;
+            border-radius: 10px; background: rgba(255,255,255,0.08);
+            display: grid; place-items: center;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800; font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .option-btn.selected { border-color: var(--accent); background: var(--accent-glow); }
+        .option-btn.selected .option-letter { background: var(--accent); color: #fff; }
+        .option-btn.locked { cursor: default; }
+        .feedback-icon {
+            position: absolute; right: 16px;
+            font-size: 20px; opacity: 0; transform: scale(0.5);
+            transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+
+        .ripple {
+            position: absolute; border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            transform: scale(0); animation: rippleAnim 0.5s ease-out;
+            pointer-events: none;
+        }
+        @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
+
+        .answered-msg {
+            display: none; text-align: center;
+            padding: 2rem 0;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 20px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--muted);
+            animation: fadeSlideIn 0.4s ease forwards;
+        }
+
+        /* ─── RESULT FLASH ─── */
+        .result-flash {
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center; flex: 1;
+        }
+        .result-flash.active { display: flex; }
+        .result-icon {
+            font-size: clamp(60px, 18vw, 90px);
+            font-weight: 900;
+            animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .result-msg {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(28px, 7vw, 40px); font-weight: 900;
+            text-transform: uppercase; margin-top: 8px;
+        }
+        .result-delta {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(22px, 6vw, 32px); font-weight: 800;
+            margin-top: 8px;
+        }
+        .result-score {
+            font-size: 16px; color: var(--muted); margin-top: 12px;
+        }
+
+        /* ─── FINAL ─── */
+        .final-screen { align-items: center; justify-content: center; text-align: center; }
+        .final-screen h2 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 18px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+        .score-ring-wrap { display: flex; justify-content: center; margin: 20px 0 8px; }
+        .score-ring {
+            width: clamp(160px, 40vw, 220px); height: clamp(160px, 40vw, 220px);
+            position: relative;
+        }
+        .score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .score-ring .bg-circle { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 6; }
+        .score-ring .fill-circle {
+            fill: none; stroke: var(--accent); stroke-width: 6;
+            stroke-linecap: round;
+            stroke-dasharray: 408; stroke-dashoffset: 408;
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1) 0.3s;
+        }
+        .score-ring .score-inner {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .final-score-num {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(48px, 16vw, 80px); font-weight: 900;
+            color: var(--accent); line-height: 1;
+        }
+        .final-rank {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(16px, 4vw, 22px); font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--muted); margin-top: 4px;
+        }
+
+        /* ─── ANIMATIONS ─── */
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes shakeX {
+            0%,100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); } 40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); } 80% { transform: translateX(4px); }
+        }
+        .shake { animation: shakeX 0.45s ease; }
+
+        /* ─── CONFETTI ─── */
+        #confetti { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+
+        @media (max-width:390px) {
+            .wrap { padding: 1.5rem 12px 2.5rem; }
+            .card { padding: 16px 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-fixed" style="background-image: url('https://marketing.hkolimpija.si/asset/9:background2');"></div>
+    <div class="bg-overlay"></div>
+    <canvas id="confetti"></canvas>
+
+    <main class="wrap">
+        <!-- ====== JOIN ====== -->
+        <div class="screen join-screen active" id="screenJoin">
+            <h1>Pridruži se kvizu!</h1>
+            <p class="sub">Vpiši svoje ime in čakaj na začetek</p>
+            <div class="join-card">
+                <label class="field">
+                    <span>Tvoje ime</span>
+                    <input type="text" id="inputName" placeholder="Vnesi ime" maxlength="20" autocomplete="off" />
+                </label>
+                <button class="cta" id="btnJoin">Pridruži se</button>
+            </div>
+            <div class="conn-info">
+                <span class="dot" id="connDot"></span>
+                <span id="connLabel">Povezovanje...</span>
+            </div>
+        </div>
+
+        <!-- ====== WAITING ====== -->
+        <div class="screen waiting-screen" id="screenWaiting">
+            <h2>Pripravljen!</h2>
+            <p class="sub">Čakamo, da voditelj začne kviz...</p>
+            <div class="waiting-dots"><span></span><span></span><span></span></div>
+        </div>
+
+        <!-- ====== QUESTION ====== -->
+        <div class="screen question-screen" id="screenQuestion">
+            <div class="progress-wrap">
+                <div class="progress-info">
+                    <span id="progressLabel">Vprašanje 1</span>
+                    <span id="scoreLabel">0 točk</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+            <div class="card card-enter" id="questionCard">
+                <div class="question-number" id="qNumber">Vprašanje 1</div>
+                <div class="question-text" id="qText"></div>
+            </div>
+            <div class="timer-bar" id="timerBar">
+                <div class="timer-fill" id="timerFill"></div>
+            </div>
+            <div class="options" id="optionsContainer"></div>
+            <div class="answered-msg" id="answeredMsg">Odgovor oddan, čakamo...</div>
+        </div>
+
+        <!-- ====== RESULT FLASH ====== -->
+        <div class="screen" id="screenResult">
+            <div class="result-flash active" id="resultFlash">
+                <div class="result-icon" id="resultIcon">✓</div>
+                <div class="result-msg" id="resultMsg">Pravilno!</div>
+                <div class="result-delta" id="resultDelta">+750</div>
+                <div class="result-score" id="resultScore">Skupaj: 750 točk</div>
+            </div>
+        </div>
+
+        <!-- ====== FINAL ====== -->
+        <div class="screen final-screen" id="screenFinal">
+            <h2>Končni rezultat</h2>
+            <div class="score-ring-wrap">
+                <div class="score-ring">
+                    <svg viewBox="0 0 140 140">
+                        <circle class="bg-circle" cx="70" cy="70" r="65" />
+                        <circle class="fill-circle" id="finalCircle" cx="70" cy="70" r="65" />
+                    </svg>
+                    <div class="score-inner">
+                        <div class="final-score-num" id="finalScore">0</div>
+                        <div class="final-rank" id="finalRank"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   CLIENT — WebSocket version
+   ═══════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const letters = 'ABCD';
+
+// State
+let ws = null;
+let playerId = sessionStorage.getItem('quiz_playerId') || null;
+let playerName = sessionStorage.getItem('quiz_playerName') || '';
+let myScore = 0;
+let locked = false;
+let timerInterval = null;
+let questionStartTime = 0;
+let totalQuestions = 8;
+
+// ── WebSocket connect ──
+function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/`);
+
+    ws.onopen = () => {
+        $('connDot').classList.add('ok');
+        $('connLabel').textContent = 'Povezano';
+        // Auto-rejoin if we have a saved session
+        if (playerId && playerName) {
+            send({ type: 'rejoin', playerId, name: playerName });
+        }
+    };
+
+    ws.onclose = () => {
+        $('connDot').classList.remove('ok');
+        $('connLabel').textContent = 'Prekinjeno — ponovni poskus...';
+        setTimeout(connect, 2000);
+    };
+
+    ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleMessage(msg);
+    };
+}
+
+function send(data) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(data));
+}
+
+// ── Message handler ──
+function handleMessage(msg) {
+    if (msg.type === 'joined') {
+        playerId = msg.playerId;
+        sessionStorage.setItem('quiz_playerId', playerId);
+        sessionStorage.setItem('quiz_playerName', playerName);
+        showScreen('screenWaiting');
+    }
+
+    if (msg.type === 'rejoined') {
+        playerId = msg.playerId;
+        myScore = msg.score || 0;
+        // Restore to correct screen based on phase
+        const phase = msg.phase;
+        if (phase === 'lobby') {
+            showScreen('screenWaiting');
+        } else if (phase === 'question' || phase === 'timer_done') {
+            if (msg.currentQuestion) {
+                // Pass timeRemaining so timer syncs with server
+                msg.currentQuestion._timeRemaining = msg.timeRemaining;
+                onQuestion(msg.currentQuestion);
+                if (msg.alreadyAnswered) {
+                    locked = true;
+                    $('optionsContainer').style.display = 'none';
+                    $('answeredMsg').style.display = 'block';
+                    $('answeredMsg').textContent = 'Odgovor oddan, čakamo...';
+                }
+            } else {
+                showScreen('screenWaiting');
+            }
+        } else if (phase === 'revealed' || phase === 'leaderboard') {
+            // Show last reveal result
+            if (msg.lastReveal) {
+                onReveal(msg.lastReveal);
+            } else {
+                showScreen('screenWaiting');
+            }
+        } else if (phase === 'final') {
+            if (msg.finalData) onFinal(msg.finalData);
+            else showScreen('screenWaiting');
+        } else {
+            showScreen('screenWaiting');
+        }
+        $('scoreLabel').textContent = `${myScore} točk`;
+    }
+
+    if (msg.type === 'rejoin_failed') {
+        // Server doesn't know us anymore — clear session and show join screen
+        sessionStorage.removeItem('quiz_playerId');
+        sessionStorage.removeItem('quiz_playerName');
+        playerId = null;
+        playerName = '';
+        myScore = 0;
+        showScreen('screenJoin');
+    }
+
+    if (msg.type === 'question') onQuestion(msg);
+    if (msg.type === 'time_up') onTimeUp();
+    if (msg.type === 'reveal') onReveal(msg);
+    if (msg.type === 'leaderboard') { /* stay on result screen */ }
+    if (msg.type === 'final') onFinal(msg);
+    if (msg.type === 'reset') {
+        myScore = 0;
+        sessionStorage.removeItem('quiz_playerId');
+        sessionStorage.removeItem('quiz_playerName');
+        playerId = null;
+        playerName = '';
+        showScreen('screenJoin');
+    }
+}
+
+// ── Join ──
+$('btnJoin').addEventListener('click', join);
+$('inputName').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+
+function join() {
+    const name = $('inputName').value.trim();
+    if (!name) {
+        $('inputName').style.borderColor = 'var(--wrong)';
+        $('inputName').classList.add('shake');
+        setTimeout(() => { $('inputName').classList.remove('shake'); $('inputName').style.borderColor = ''; }, 500);
+        return;
+    }
+    playerName = name;
+    sessionStorage.setItem('quiz_playerName', name);
+    send({ type: 'join', name });
+}
+
+// ── Question ──
+function onQuestion(msg) {
+    locked = false;
+    questionStartTime = Date.now();
+    totalQuestions = msg.totalQuestions || totalQuestions;
+
+    showScreen('screenQuestion');
+
+    $('progressLabel').textContent = `Vprašanje ${msg.index + 1}`;
+    $('scoreLabel').textContent = `${myScore} točk`;
+    $('progressFill').style.width = `${(msg.index / totalQuestions) * 100}%`;
+    $('qNumber').textContent = `Vprašanje ${msg.index + 1}`;
+    $('qText').textContent = msg.question;
+
+    const card = $('questionCard');
+    card.classList.remove('card-enter');
+    void card.offsetWidth;
+    card.classList.add('card-enter');
+
+    const container = $('optionsContainer');
+    container.innerHTML = '';
+    container.style.display = 'grid';
+    $('answeredMsg').style.display = 'none';
+
+    msg.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.style.opacity = '0'; btn.style.transform = 'translateY(12px)';
+        btn.innerHTML = `
+            <span class="option-letter">${letters[i]}</span>
+            <span class="option-text">${opt}</span>
+            <span class="feedback-icon"></span>
+        `;
+        btn.addEventListener('click', (e) => selectAnswer(i, btn, e));
+        container.appendChild(btn);
+        setTimeout(() => {
+            btn.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+            btn.style.opacity = '1'; btn.style.transform = 'translateY(0)';
+        }, 80 + i * 70);
+    });
+
+    // Use server's remaining time if available (rejoin), otherwise full timer
+    const totalSec = msg.timerSeconds || 15;
+    const remaining = msg._timeRemaining != null ? msg._timeRemaining : totalSec;
+    startTimer(totalSec, remaining);
+}
+
+function selectAnswer(index, btn, event) {
+    if (locked) return;
+    locked = true;
+
+    // Ripple
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.left = `${event.clientX - rect.left}px`;
+    ripple.style.top = `${event.clientY - rect.top}px`;
+    btn.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.add('locked'));
+    btn.classList.add('selected');
+
+    send({
+        type: 'answer',
+        chosenIndex: index,
+        answerTime: Date.now() - questionStartTime
+    });
+
+    setTimeout(() => {
+        $('optionsContainer').style.display = 'none';
+        $('answeredMsg').style.display = 'block';
+        $('answeredMsg').textContent = 'Odgovor oddan, čakamo...';
+    }, 400);
+}
+
+// ── Timer ──
+function startTimer(totalSeconds, remaining) {
+    if (remaining == null) remaining = totalSeconds;
+    $('timerBar').style.display = 'block';
+    const fill = $('timerFill');
+    fill.classList.remove('warning', 'danger');
+
+    // Start at correct position
+    const startPct = (remaining / totalSeconds) * 100;
+    fill.style.transition = 'none';
+    fill.style.width = `${startPct}%`;
+    // Force reflow then re-enable transition
+    void fill.offsetWidth;
+    fill.style.transition = 'width 0.1s linear';
+
+    let left = Math.round(remaining * 10);
+    const total = Math.round(totalSeconds * 10);
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        left--;
+        const pct = (left / total) * 100;
+        fill.style.width = `${pct}%`;
+
+        const secs = Math.ceil(left / 10);
+        if (secs <= 3) { fill.classList.add('danger'); fill.classList.remove('warning'); }
+        else if (secs <= 5) fill.classList.add('warning');
+
+        if (left <= 0) clearInterval(timerInterval);
+    }, 100);
+}
+
+function onTimeUp() {
+    clearInterval(timerInterval);
+    $('timerFill').style.width = '0%';
+    if (!locked) {
+        locked = true;
+        document.querySelectorAll('.option-btn').forEach(b => b.classList.add('locked'));
+        $('optionsContainer').style.display = 'none';
+        $('answeredMsg').style.display = 'block';
+        $('answeredMsg').textContent = 'Čas je potekel!';
+    }
+}
+
+// ── Reveal ──
+function onReveal(msg) {
+    clearInterval(timerInterval);
+    myScore = msg.score;
+
+    showScreen('screenResult');
+
+    const flash = $('resultFlash');
+    const didAnswer = msg.didAnswer !== false; // backwards compat
+    const timedOut = !didAnswer;
+
+    if (msg.isCorrect) {
+        flash.className = 'result-flash active';
+        $('resultIcon').textContent = '✓';
+        $('resultIcon').style.color = 'var(--correct)';
+        $('resultMsg').textContent = 'Pravilno!';
+        $('resultDelta').textContent = `+${msg.lastDelta}`;
+        $('resultDelta').style.color = 'var(--correct)';
+    } else if (timedOut) {
+        flash.className = 'result-flash active wrong-flash';
+        $('resultIcon').textContent = '—';
+        $('resultIcon').style.color = 'var(--dim)';
+        $('resultMsg').textContent = 'Prepozno!';
+        $('resultDelta').textContent = '+0';
+        $('resultDelta').style.color = 'var(--dim)';
+    } else {
+        flash.className = 'result-flash active wrong-flash';
+        $('resultIcon').textContent = '✗';
+        $('resultIcon').style.color = 'var(--wrong)';
+        $('resultMsg').textContent = 'Napačno!';
+        $('resultDelta').textContent = '+0';
+        $('resultDelta').style.color = 'var(--wrong)';
+    }
+
+    $('resultScore').textContent = `Skupaj: ${myScore} točk`;
+
+    const icon = $('resultIcon');
+    icon.style.animation = 'none';
+    void icon.offsetWidth;
+    icon.style.animation = 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1)';
+}
+
+// ── Final ──
+function onFinal(msg) {
+    showScreen('screenFinal');
+
+    $('finalScore').textContent = msg.score;
+    $('finalRank').textContent = `${msg.rank}. mesto od ${msg.totalPlayers}`;
+
+    const pct = msg.score / (msg.topScore || 1);
+    const circumference = 2 * Math.PI * 65;
+    const offset = circumference - pct * circumference;
+    setTimeout(() => {
+        $('finalCircle').style.strokeDashoffset = offset;
+    }, 200);
+
+    if (msg.rank <= 3) launchConfetti();
+}
+
+// ── Helpers ──
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+}
+
+function launchConfetti() {
+    const canvas = $('confetti');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const colors = ['#2EB279', '#FFB830', '#E85454', '#5B8DEF', '#FFFFFF', '#FF6B9D'];
+
+    for (let i = 0; i < 80; i++) {
+        particles.push({
+            x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+            y: canvas.height * 0.4,
+            vx: (Math.random() - 0.5) * 12,
+            vy: -Math.random() * 14 - 4,
+            w: Math.random() * 8 + 4, h: Math.random() * 6 + 2,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 12,
+            gravity: 0.25 + Math.random() * 0.15,
+            opacity: 1
+        });
+    }
+
+    function frame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        particles.forEach(p => {
+            p.vy += p.gravity; p.x += p.vx; p.y += p.vy;
+            p.vx *= 0.99; p.rotation += p.rotationSpeed;
+            if (p.y > canvas.height + 20) p.opacity -= 0.02;
+            if (p.opacity > 0) {
+                alive = true; ctx.save();
+                ctx.globalAlpha = Math.max(0, p.opacity);
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.rotation * Math.PI) / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                ctx.restore();
+            }
+        });
+        if (alive) requestAnimationFrame(frame);
+        else ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    requestAnimationFrame(frame);
+}
+
+// ── Init ──
+connect();
+</script>
+</body>
+</html>

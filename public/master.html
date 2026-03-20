@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="sl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kviz — Voditelj</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #2EB279;
+            --accent-hover: #1F8F62;
+            --accent-glow: rgba(46, 178, 121, 0.25);
+            --text: #e6fff7;
+            --muted: #bfdad2;
+            --dim: #7A8B85;
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(46, 178, 121, 0.15);
+            --correct: #2EB279;
+            --correct-bg: rgba(46, 178, 121, 0.15);
+            --wrong: #E85454;
+            --wrong-bg: rgba(232, 84, 84, 0.12);
+            --option-bg: rgba(255, 255, 255, 0.06);
+            --option-border: rgba(255, 255, 255, 0.12);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Barlow', 'Helvetica Neue', sans-serif;
+            color: var(--text);
+        }
+        .bg-fixed {
+            position: fixed; inset: 0;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            z-index: 0;
+        }
+        .bg-overlay {
+            position: fixed; inset: 0;
+            background: linear-gradient(160deg, rgba(4,22,14,0.88) 0%, rgba(7,35,22,0.82) 50%, rgba(4,22,14,0.92) 100%);
+            z-index: 1;
+        }
+        .app {
+            position: relative; z-index: 2;
+            height: 100vh; display: flex; flex-direction: column;
+            padding: 2rem 3rem;
+        }
+
+        /* ─── HEADER ─── */
+        .top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; flex-shrink: 0;
+        }
+        .brand {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900; font-size: 22px;
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .brand small {
+            font-weight: 600; font-size: 13px;
+            color: var(--accent); letter-spacing: 0.1em;
+            display: block;
+        }
+        .top-right { display: flex; align-items: center; gap: 24px; }
+        .conn-status {
+            display: flex; align-items: center; gap: 6px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 13px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--dim);
+        }
+        .conn-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--wrong); transition: background 0.3s;
+        }
+        .conn-dot.ok { background: var(--correct); }
+        .player-count {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 16px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+        .player-count b { color: var(--accent); font-size: 22px; }
+
+        /* ─── SCREENS ─── */
+        .screen { display: none; flex: 1; flex-direction: column; }
+        .screen.active { display: flex; }
+
+        /* ─── LOBBY ─── */
+        .lobby { align-items: center; justify-content: center; text-align: center; }
+        .lobby h1 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(32px, 5vw, 52px); font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.03em;
+            margin-bottom: 8px;
+        }
+        .lobby .sub { color: var(--muted); font-size: 18px; margin-bottom: 2rem; }
+
+        .join-info {
+            display: flex; align-items: center; gap: 2.5rem;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 20px; padding: 2rem 2.5rem;
+            margin-bottom: 2rem;
+        }
+        .qr-box {
+            flex-shrink: 0;
+            background: #fff; border-radius: 12px; padding: 10px;
+            width: 180px; height: 180px;
+            display: grid; place-items: center;
+        }
+        .qr-box img { display: block; width: 160px; height: 160px; }
+        .join-text {
+            text-align: left;
+        }
+        .join-text .label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 14px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--accent); margin-bottom: 6px;
+        }
+        .join-text .url {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(20px, 3vw, 32px); font-weight: 900;
+            word-break: break-all;
+        }
+        .join-text .hint {
+            color: var(--dim); font-size: 14px; margin-top: 6px;
+        }
+
+        .player-list {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            justify-content: center; max-width: 700px; margin: 0 auto 2rem;
+        }
+        .player-chip {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 999px; padding: 8px 20px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 16px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            animation: fadeSlideIn 0.3s ease forwards;
+        }
+
+        .btn {
+            display: inline-block; padding: 16px 48px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 20px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            color: #fff; background: var(--accent);
+            border: 0; border-radius: 999px; cursor: pointer;
+            transition: background 0.2s, transform 0.08s;
+        }
+        .btn:hover { filter: brightness(1.05); }
+        .btn:active { transform: translateY(1px); background: var(--accent-hover); }
+        .btn:disabled { opacity: 0.4; cursor: default; filter: none; }
+        .btn.secondary {
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid var(--accent);
+        }
+
+        /* ─── QUESTION SCREEN ─── */
+        .question-screen { gap: 1.5rem; }
+        .progress-row {
+            display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+        }
+        .progress-text {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 15px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--muted); white-space: nowrap;
+        }
+        .progress-bar {
+            flex: 1; height: 6px; background: rgba(255,255,255,0.08);
+            border-radius: 999px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: var(--accent);
+            border-radius: 999px;
+            transition: width 0.5s cubic-bezier(0.22,1,0.36,1);
+        }
+
+        .q-card {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 20px; padding: 2rem 2.5rem;
+            flex-shrink: 0;
+        }
+        .q-card.animate { animation: fadeSlideIn 0.45s ease forwards; }
+        .q-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 14px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--accent); margin-bottom: 10px;
+        }
+        .q-text {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(24px, 4vw, 38px); font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.02em;
+            line-height: 1.2;
+        }
+
+        /* Timer */
+        .timer-ring-wrap {
+            width: 52px; height: 52px;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .timer-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .timer-ring .bg-c { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 5; }
+        .timer-ring .fill-c {
+            fill: none; stroke: var(--accent); stroke-width: 5;
+            stroke-linecap: round;
+            stroke-dasharray: 188.5; stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.3s linear, stroke 0.3s ease;
+        }
+        .timer-ring .fill-c.warning { stroke: #FFB830; }
+        .timer-ring .fill-c.danger { stroke: var(--wrong); }
+        .timer-num {
+            position: absolute; inset: 0; display: flex;
+            align-items: center; justify-content: center;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 20px; font-weight: 900;
+        }
+
+        /* Options grid */
+        .options-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 12px; flex-shrink: 0;
+        }
+        .opt-master {
+            display: flex; align-items: center; gap: 14px;
+            padding: 16px 22px;
+            background: var(--option-bg); border: 1.5px solid var(--option-border);
+            border-radius: 14px;
+            font-family: 'Barlow', sans-serif;
+            font-size: clamp(15px, 2vw, 18px); font-weight: 500;
+            transition: all 0.35s ease;
+            opacity: 0; transform: translateY(10px);
+        }
+        .opt-master.show { opacity: 1; transform: translateY(0); }
+        .opt-master .letter {
+            flex-shrink: 0; width: 36px; height: 36px;
+            border-radius: 10px; background: rgba(255,255,255,0.08);
+            display: grid; place-items: center;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800; font-size: 15px;
+            transition: all 0.3s ease;
+        }
+        .opt-master .count-badge {
+            margin-left: auto;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 14px; font-weight: 700; color: var(--muted);
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .opt-master .count-badge.show { opacity: 1; }
+        .opt-master.correct-reveal { background: var(--correct-bg); border-color: var(--correct); }
+        .opt-master.correct-reveal .letter { background: var(--correct); color: #fff; }
+        .opt-master.wrong-reveal { opacity: 0.35; }
+
+        .answer-bar {
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; flex-shrink: 0;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 16px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+        .answer-bar b { color: var(--accent); font-size: 20px; }
+
+        .master-actions {
+            display: flex; gap: 12px; justify-content: center;
+            flex-shrink: 0; margin-top: auto; padding-top: 1rem;
+        }
+
+        /* ─── LEADERBOARD ─── */
+        .leaderboard { align-items: center; }
+        .leaderboard h2 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(28px, 4vw, 42px); font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.03em;
+            margin-bottom: 1.5rem;
+        }
+        .lb-list { width: 100%; max-width: 600px; }
+        .lb-row {
+            display: flex; align-items: center; gap: 16px;
+            padding: 12px 20px; margin-bottom: 8px;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 14px;
+            opacity: 0; transform: translateY(12px);
+        }
+        .lb-row.show { animation: fadeSlideIn 0.4s ease forwards; }
+        .lb-rank {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 20px; font-weight: 900; width: 32px; text-align: center;
+            color: var(--accent);
+        }
+        .lb-row:nth-child(1) .lb-rank { font-size: 26px; }
+        .lb-name {
+            flex: 1;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 18px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .lb-score {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 20px; font-weight: 900; color: var(--accent);
+        }
+        .lb-delta { font-size: 13px; font-weight: 600; color: var(--correct); margin-left: 4px; }
+
+        /* ─── FINAL ─── */
+        .final-screen { align-items: center; justify-content: center; text-align: center; }
+        .final-screen h2 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(32px, 5vw, 52px); font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        /* ─── TIMER SELECT (lobby) ─── */
+        .timer-select {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 1.5rem;
+        }
+        .timer-select-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 15px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--muted); white-space: nowrap;
+        }
+        .timer-options { display: flex; gap: 8px; }
+        .timer-opt {
+            padding: 8px 18px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 15px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.04em;
+            color: var(--muted);
+            background: var(--card-bg); border: 1.5px solid var(--card-border);
+            border-radius: 999px; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .timer-opt:hover { border-color: rgba(46,178,121,0.4); color: var(--text); }
+        .timer-opt.active {
+            background: var(--accent); border-color: var(--accent);
+            color: #fff;
+        }
+
+        /* ─── ANIMATIONS ─── */
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 700px) {
+            .app { padding: 1.5rem 1.2rem; }
+            .options-grid { grid-template-columns: 1fr; }
+            .timer-ring-wrap { width: 44px; height: 44px; }
+            .timer-num { font-size: 16px; }
+            .join-info { flex-direction: column; gap: 1.5rem; text-align: center; }
+            .join-text { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-fixed" style="background-image: url('https://marketing.hkolimpija.si/asset/9:background2');"></div>
+    <div class="bg-overlay"></div>
+
+    <div class="app">
+        <div class="top-bar">
+            <div class="brand">
+                <small>Kviz</small>
+                Kako dobro poznaš Olimpijo?
+            </div>
+            <div class="top-right">
+                <div class="conn-status">
+                    <span class="conn-dot" id="connDot"></span>
+                    <span id="connLabel">Povezovanje...</span>
+                </div>
+                <div class="timer-ring-wrap" id="timerWrap" style="display:none;">
+                    <div class="timer-ring">
+                        <svg viewBox="0 0 72 72">
+                            <circle class="bg-c" cx="36" cy="36" r="30" />
+                            <circle class="fill-c" id="timerCircle" cx="36" cy="36" r="30" />
+                        </svg>
+                        <div class="timer-num" id="timerNum">15</div>
+                    </div>
+                </div>
+                <div class="player-count">Igralcev: <b id="pCount">0</b></div>
+            </div>
+        </div>
+
+        <!-- ====== LOBBY ====== -->
+        <div class="screen lobby active" id="screenLobby">
+            <h1>Čakamo igralce...</h1>
+            <p class="sub">Igralci se pridružijo s skeniranjem QR kode ali obiskom naslova</p>
+
+            <div class="join-info">
+                <div class="qr-box" id="qrBox">
+                    <img id="qrImg" alt="QR" />
+                </div>
+                <div class="join-text">
+                    <div class="label">Pridruži se na</div>
+                    <div class="url" id="joinUrl">...</div>
+                    <div class="hint">Odpri na telefonu in vpiši svoje ime</div>
+                </div>
+            </div>
+
+            <div class="player-list" id="playerList"></div>
+
+            <div class="timer-select">
+                <span class="timer-select-label">Čas za odgovor:</span>
+                <div class="timer-options" id="timerOptions">
+                    <button class="timer-opt" data-sec="10">10s</button>
+                    <button class="timer-opt active" data-sec="15">15s</button>
+                    <button class="timer-opt" data-sec="20">20s</button>
+                    <button class="timer-opt" data-sec="30">30s</button>
+                </div>
+            </div>
+
+            <button class="btn" id="btnStart" disabled>Začni kviz</button>
+        </div>
+
+        <!-- ====== QUESTION ====== -->
+        <div class="screen question-screen" id="screenQuestion">
+            <div class="progress-row">
+                <span class="progress-text" id="qProgress">1 / 8</span>
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            </div>
+            <div class="q-card" id="qCard">
+                <div class="q-label" id="qLabel">Vprašanje 1</div>
+                <div class="q-text" id="qText"></div>
+            </div>
+            <div class="options-grid" id="optionsGrid"></div>
+            <div class="answer-bar" id="answerBar" style="display:none;">
+                Odgovorilo: <b id="answeredCount">0</b> / <b id="totalPlayers">0</b>
+            </div>
+            <div class="master-actions">
+                <button class="btn" id="btnReveal" style="display:none;">Razkrij odgovor</button>
+                <button class="btn secondary" id="btnLeaderboard" style="display:none;">Lestvica</button>
+            </div>
+        </div>
+
+        <!-- ====== LEADERBOARD ====== -->
+        <div class="screen leaderboard" id="screenLeaderboard">
+            <h2>Lestvica</h2>
+            <div class="lb-list" id="lbList"></div>
+            <div class="master-actions" style="margin-top:2rem;">
+                <button class="btn" id="btnNextFromLB">Naslednje vprašanje</button>
+            </div>
+        </div>
+
+        <!-- ====== FINAL ====== -->
+        <div class="screen final-screen" id="screenFinal">
+            <h2>Končni rezultat</h2>
+            <div class="lb-list" id="finalLbList" style="margin-top:1.5rem;"></div>
+            <div class="master-actions" style="margin-top:2rem;">
+                <button class="btn secondary" id="btnReset">Ponovi kviz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    /* ═══════════════════════════════════════════════════════
+       MASTER — WebSocket version
+       ═══════════════════════════════════════════════════════ */
+    const $ = id => document.getElementById(id);
+    const letters = 'ABCD';
+
+    // State
+    let ws = null;
+    let questions = [];
+    let currentQ = 0;
+    let timerInterval = null;
+    let timerLeft = 0;
+    let timerSeconds = 15;
+
+    // ── WebSocket connect ──
+    function connect() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${proto}://${location.host}/?role=master`);
+
+        ws.onopen = () => {
+            $('connDot').classList.add('ok');
+            $('connLabel').textContent = 'Povezano';
+        };
+
+        ws.onclose = () => {
+            $('connDot').classList.remove('ok');
+            $('connLabel').textContent = 'Prekinjeno';
+            // Reconnect after 2s
+            setTimeout(connect, 2000);
+        };
+
+        ws.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
+            handleMessage(msg);
+        };
+    }
+
+    function send(data) {
+        if (ws && ws.readyState === 1) ws.send(JSON.stringify(data));
+    }
+
+    // ── Generate QR code ──
+    function generateQR() {
+        const clientUrl = `${location.protocol}//${location.host}/client.html`;
+        $('joinUrl').textContent = clientUrl;
+
+        // Generate QR as SVG using server endpoint
+        $('qrImg').src = `/api/qr?url=${encodeURIComponent(clientUrl)}`;
+        $('qrImg').onerror = () => {
+            // Fallback: generate QR client-side using a simple canvas approach
+            generateQRCanvas(clientUrl);
+        };
+    }
+
+    function generateQRCanvas(url) {
+        // Minimal QR replacement: show URL in a styled box
+        $('qrBox').innerHTML = `<div style="color:#0a2e1a;font-size:11px;padding:12px;text-align:center;word-break:break-all;font-weight:600;">${url}</div>`;
+    }
+
+    // ── Message handler ──
+    function handleMessage(msg) {
+        if (msg.type === 'init') {
+            questions = msg.config.questions;
+            timerSeconds = msg.config.timerSeconds;
+            $('pCount').textContent = Object.keys(msg.players).length;
+
+            // Re-render lobby players
+            $('playerList').innerHTML = '';
+            Object.values(msg.players).forEach(p => addPlayerChip(p.name));
+
+            const phase = msg.phase;
+
+            if (phase === 'lobby') {
+                showScreen('screenLobby');
+                $('btnStart').disabled = Object.keys(msg.players).length < 1;
+
+            } else if (phase === 'question' || phase === 'timer_done') {
+                // Reconnect into active question
+                showScreen('screenQuestion');
+                if (msg.currentQuestion) {
+                    currentQ = msg.currentQuestion.index;
+                    renderQuestion(msg.currentQuestion);
+                    // Don't restart timer — it's already running on server
+                    // Show reveal button if timer is done
+                    if (phase === 'timer_done') {
+                        $('btnReveal').style.display = 'inline-block';
+                    }
+                }
+                $('answeredCount').textContent = msg.answeredCount || 0;
+                $('totalPlayers').textContent = msg.totalPlayers || 0;
+                $('answerBar').style.display = 'flex';
+                updateOptionCounts(msg.optionCounts);
+
+            } else if (phase === 'revealed') {
+                // Reconnect after reveal — show question with answer highlighted
+                showScreen('screenQuestion');
+                if (msg.currentQuestion) {
+                    currentQ = msg.currentQuestion.index;
+                    renderQuestion(msg.currentQuestion);
+                    // Immediately show reveal state
+                    setTimeout(() => {
+                        revealAnswer(msg.correctIndex, msg.optionCounts);
+                    }, 100);
+                }
+
+            } else if (phase === 'leaderboard') {
+                showScreen('screenLeaderboard');
+                renderLeaderboard(msg.rankings);
+                currentQ = msg.currentQ;
+                const isLast = currentQ >= questions.length - 1;
+                $('btnNextFromLB').textContent = isLast ? 'Končni rezultat' : 'Naslednje vprašanje';
+
+            } else if (phase === 'final') {
+                showScreen('screenFinal');
+                renderFinalLeaderboard(msg.rankings);
+            }
+        }
+
+        if (msg.type === 'player_joined') {
+            $('pCount').textContent = msg.playerCount;
+            addPlayerChip(msg.name);
+            $('btnStart').disabled = false;
+        }
+
+        if (msg.type === 'question') {
+            currentQ = msg.index;
+            showScreen('screenQuestion');
+            renderQuestion(msg);
+            startTimer(msg.timerSeconds);
+        }
+
+        if (msg.type === 'answer_update') {
+            $('answeredCount').textContent = msg.answeredCount;
+            $('totalPlayers').textContent = msg.totalPlayers;
+            updateOptionCounts(msg.optionCounts);
+        }
+
+        if (msg.type === 'time_up') {
+            clearInterval(timerInterval);
+            $('timerNum').textContent = '0';
+            // Auto-reveal when time runs out
+            send({ type: 'reveal' });
+        }
+
+        if (msg.type === 'all_answered') {
+            clearInterval(timerInterval);
+            $('timerNum').textContent = '0';
+            // Auto-reveal when everyone answered
+            send({ type: 'reveal' });
+        }
+
+        if (msg.type === 'reveal') {
+            clearInterval(timerInterval);
+            revealAnswer(msg.correctIndex, msg.optionCounts);
+        }
+
+        if (msg.type === 'leaderboard') {
+            showScreen('screenLeaderboard');
+            renderLeaderboard(msg.rankings);
+        }
+
+        if (msg.type === 'final') {
+            showScreen('screenFinal');
+            renderFinalLeaderboard(msg.rankings);
+        }
+
+        if (msg.type === 'reset_ack') {
+            showScreen('screenLobby');
+            $('pCount').textContent = msg.playerCount;
+            $('btnStart').disabled = msg.playerCount < 1;
+        }
+    }
+
+    // ── Lobby ──
+    function addPlayerChip(name) {
+        const chip = document.createElement('div');
+        chip.className = 'player-chip';
+        chip.textContent = name;
+        $('playerList').appendChild(chip);
+    }
+
+    // ── Timer select ──
+    let selectedTimer = 15;
+    document.querySelectorAll('.timer-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.timer-opt').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedTimer = parseInt(btn.dataset.sec);
+        });
+    });
+
+    $('btnStart').addEventListener('click', () => send({ type: 'start', timerSeconds: selectedTimer }));
+
+    // ── Question ──
+    function renderQuestion(msg) {
+        $('qProgress').textContent = `${msg.index + 1} / ${msg.totalQuestions}`;
+        $('progressFill').style.width = `${(msg.index / msg.totalQuestions) * 100}%`;
+        $('qLabel').textContent = `Vprašanje ${msg.index + 1}`;
+        $('qText').textContent = msg.question;
+
+        const card = $('qCard');
+        card.classList.remove('animate');
+        void card.offsetWidth;
+        card.classList.add('animate');
+
+        const grid = $('optionsGrid');
+        grid.innerHTML = '';
+        msg.options.forEach((opt, i) => {
+            const div = document.createElement('div');
+            div.className = 'opt-master';
+            div.id = `opt_${i}`;
+            div.innerHTML = `
+                <span class="letter">${letters[i]}</span>
+                <span>${opt}</span>
+                <span class="count-badge" id="optCount_${i}">0</span>
+            `;
+            grid.appendChild(div);
+            setTimeout(() => div.classList.add('show'), 100 + i * 80);
+        });
+
+        $('answeredCount').textContent = '0';
+        $('totalPlayers').textContent = msg.playerCount;
+        $('answerBar').style.display = 'flex';
+        $('btnReveal').style.display = 'none';
+        $('btnLeaderboard').style.display = 'none';
+        $('timerWrap').style.display = 'block';
+    }
+
+    function updateOptionCounts(counts) {
+        if (!counts) return;
+        counts.forEach((cnt, i) => {
+            const el = $(`optCount_${i}`);
+            if (el) { el.textContent = cnt; el.classList.add('show'); }
+        });
+    }
+
+    // ── Timer (visual only — server is authoritative) ──
+    function startTimer(seconds) {
+        const circumference = 2 * Math.PI * 30;
+        const circle = $('timerCircle');
+        circle.style.strokeDashoffset = '0';
+        circle.classList.remove('warning', 'danger');
+        $('timerNum').textContent = seconds;
+
+        timerLeft = seconds * 10;
+        clearInterval(timerInterval);
+
+        timerInterval = setInterval(() => {
+            timerLeft--;
+            const secs = Math.ceil(timerLeft / 10);
+            $('timerNum').textContent = secs;
+            const pct = timerLeft / (seconds * 10);
+            circle.style.strokeDashoffset = (1 - pct) * circumference;
+
+            if (secs <= 3) { circle.classList.add('danger'); circle.classList.remove('warning'); }
+            else if (secs <= 5) circle.classList.add('warning');
+
+            if (timerLeft <= 0) clearInterval(timerInterval);
+        }, 100);
+    }
+
+    // ── Reveal ──
+    $('btnReveal').addEventListener('click', () => send({ type: 'reveal' }));
+
+    function revealAnswer(correctIndex, counts) {
+        clearInterval(timerInterval);
+        // Hide timer
+        $('timerWrap').style.display = 'none';
+
+        updateOptionCounts(counts);
+        document.querySelectorAll('.opt-master').forEach((el, i) => {
+            if (i === correctIndex) el.classList.add('correct-reveal');
+            else el.classList.add('wrong-reveal');
+        });
+        $('btnReveal').style.display = 'none';
+        $('btnLeaderboard').style.display = 'inline-block';
+    }
+
+    // ── Leaderboard ──
+    $('btnLeaderboard').addEventListener('click', () => send({ type: 'leaderboard' }));
+
+    function renderLeaderboard(rankings) {
+        const list = $('lbList');
+        list.innerHTML = '';
+        rankings.forEach((p, i) => {
+            const row = document.createElement('div');
+            row.className = 'lb-row';
+            row.innerHTML = `
+                <span class="lb-rank">${i + 1}.</span>
+                <span class="lb-name">${p.name}</span>
+                <span class="lb-score">${p.score}${p.lastDelta > 0 ? `<span class="lb-delta">+${p.lastDelta}</span>` : ''}</span>
+            `;
+            list.appendChild(row);
+            setTimeout(() => row.classList.add('show'), 150 + i * 100);
+        });
+    }
+
+    $('btnNextFromLB').addEventListener('click', () => send({ type: 'next' }));
+
+    // ── Final ──
+    function renderFinalLeaderboard(rankings) {
+        const list = $('finalLbList');
+        list.innerHTML = '';
+        rankings.forEach((p, i) => {
+            const row = document.createElement('div');
+            row.className = 'lb-row';
+            row.innerHTML = `
+                <span class="lb-rank">${i + 1}.</span>
+                <span class="lb-name">${p.name}</span>
+                <span class="lb-score">${p.score}</span>
+            `;
+            list.appendChild(row);
+            setTimeout(() => row.classList.add('show'), 300 + i * 120);
+        });
+    }
+
+    $('btnReset').addEventListener('click', () => {
+        $('playerList').innerHTML = '';
+        send({ type: 'reset' });
+    });
+
+    // ── Helpers ──
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        $(id).classList.add('active');
+        if (id !== 'screenQuestion') $('timerWrap').style.display = 'none';
+    }
+
+    // ── Init ──
+    connect();
+    generateQR();
+    </script>
+</body>
+</html>
