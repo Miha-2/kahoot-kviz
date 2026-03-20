@@ -15,52 +15,23 @@ const { WebSocketServer } = require('ws');
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY || 'olimpija2025';
 
-// ── Quiz questions (single source of truth) ──
-const QUIZ_CONFIG = {
-    timerSeconds: 15,
-    questions: [
-        {
-            question: "V katerem letu je bil ustanovljen HK Olimpija Ljubljana?",
-            options: ["2000", "2004", "2007", "2010"],
-            correctIndex: 1
-        },
-        {
-            question: "Kako se imenuje domača dvorana HK Olimpija?",
-            options: ["Arena Stožice", "Hala Tivoli", "Zlatorog Arena", "Ledena dvorana Zalog"],
-            correctIndex: 1
-        },
-        {
-            question: "Kakšen je vzdevek ekipe HK Olimpija?",
-            options: ["Levi", "Medvedi", "Zmaji", "Orlovi"],
-            correctIndex: 2
-        },
-        {
-            question: "V kateri ligi trenutno nastopa HK Olimpija?",
-            options: ["Alpska hokejska liga", "Liga ICEHL", "KHL", "DEL"],
-            correctIndex: 1
-        },
-        {
-            question: "Kateri klub je večni rival HK Olimpija?",
-            options: ["HK Celje", "HDD Jesenice", "HK Maribor", "HK Triglav Kranj"],
-            correctIndex: 1
-        },
-        {
-            question: "Katero žival prikazuje grb kluba HK Olimpija?",
-            options: ["Orel", "Lev", "Zmaj", "Medved"],
-            correctIndex: 2
-        },
-        {
-            question: "Kakšne barve so tradicionalne barve kluba?",
-            options: ["Rdeča in bela", "Modra in bela", "Zelena in bela", "Črna in zlata"],
-            correctIndex: 2
-        },
-        {
-            question: "V sezoni 2018/19 je Olimpija osvojila vse tri naslove. Kako se temu reče?",
-            options: ["Grand Slam", "Trojni uspeh (treble)", "Hat-trick", "Zlati hat-trick"],
-            correctIndex: 1
-        }
-    ]
-};
+// ── Quiz questions — loaded from questions.json ──
+const QUESTIONS_FILE = path.join(__dirname, 'questions.json');
+
+function loadQuizConfig() {
+    try {
+        // Clear require cache so changes are picked up
+        delete require.cache[require.resolve(QUESTIONS_FILE)];
+        const data = require(QUESTIONS_FILE);
+        console.log(`[Config] Loaded ${data.questions.length} questions from questions.json`);
+        return data;
+    } catch (e) {
+        console.error('[Config] Failed to load questions.json:', e.message);
+        return { timerSeconds: 15, questions: [] };
+    }
+}
+
+let QUIZ_CONFIG = loadQuizConfig();
 
 // ── Game state ──
 let players = {};           // { id: { name, score, ws, answered, chosenIndex, answerTime, lastDelta } }
@@ -569,8 +540,10 @@ function resetGame() {
     clearTimeout(timerHandle);
     // Notify clients before wiping
     broadcastClients({ type: 'reset' });
-    // Wipe all players — they must rejoin
+    // Wipe all players
     players = {};
+    // Reload questions (pick up any changes to questions.json)
+    QUIZ_CONFIG = loadQuizConfig();
     sendToMaster({ type: 'reset_ack', playerCount: 0 });
 }
 

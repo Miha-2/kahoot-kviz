@@ -1,0 +1,45 @@
+{
+  "timerSeconds": 15,
+  "questions": [
+    {
+      "question": "V katerem letu je bil ustanovljen HK Olimpija Ljubljana?",
+      "options": ["2000", "2004", "2007", "2010"],
+      "correctIndex": 1
+    },
+    {
+      "question": "Kako se imenuje domača dvorana HK Olimpija?",
+      "options": ["Arena Stožice", "Hala Tivoli", "Zlatorog Arena", "Ledena dvorana Zalog"],
+      "correctIndex": 1
+    },
+    {
+      "question": "Kakšen je vzdevek ekipe HK Olimpija?",
+      "options": ["Levi", "Medvedi", "Zmaji", "Orlovi"],
+      "correctIndex": 2
+    },
+    {
+      "question": "V kateri ligi trenutno nastopa HK Olimpija?",
+      "options": ["Alpska hokejska liga", "Liga ICEHL", "KHL", "DEL"],
+      "correctIndex": 1
+    },
+    {
+      "question": "Kateri klub je večni rival HK Olimpija?",
+      "options": ["HK Celje", "HDD Jesenice", "HK Maribor", "HK Triglav Kranj"],
+      "correctIndex": 1
+    },
+    {
+      "question": "Katero žival prikazuje grb kluba HK Olimpija?",
+      "options": ["Orel", "Lev", "Zmaj", "Medved"],
+      "correctIndex": 2
+    },
+    {
+      "question": "Kakšne barve so tradicionalne barve kluba?",
+      "options": ["Rdeča in bela", "Modra in bela", "Zelena in bela", "Črna in zlata"],
+      "correctIndex": 2
+    },
+    {
+      "question": "V sezoni 2018/19 je Olimpija osvojila vse tri naslove. Kako se temu reče?",
+      "options": ["Grand Slam", "Trojni uspeh (treble)", "Hat-trick", "Zlati hat-trick"],
+      "correctIndex": 1
+    }
+  ]
+}

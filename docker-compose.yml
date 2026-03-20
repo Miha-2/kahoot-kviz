@@ -6,6 +6,8 @@ services:
       - "3000"
     environment:
       - ADMIN_KEY=${ADMIN_KEY:-olimpija2025}
+    volumes:
+      - ./questions.json:/app/questions.json
     labels:
       - "traefik.enable=true"
       # HTTPS router
