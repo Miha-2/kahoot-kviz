@@ -1,0 +1,20 @@
+services:
+  kviz:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      # HTTP router
+      - "traefik.http.routers.kviz.rule=Host(`kahoot.mihaperpar.com`)"
+      - "traefik.http.routers.kviz.entrypoints=websecure"
+      - "traefik.http.routers.kviz.tls.certresolver=letsencrypt"
+      # Service
+      - "traefik.http.services.kviz.loadbalancer.server.port=3000"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true

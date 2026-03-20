@@ -499,7 +499,7 @@
 
     // ── Generate QR code ──
     function generateQR() {
-        const clientUrl = `${location.protocol}//${location.host}/client.html`;
+        const clientUrl = `${location.protocol}//${location.host}/`;
         $('joinUrl').textContent = clientUrl;
 
         // Generate QR as SVG using server endpoint

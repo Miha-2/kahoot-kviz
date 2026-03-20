@@ -2,8 +2,8 @@
    KVIZ SERVER — Node.js WebSocket
    
    Zaženi:  npm install ws  &&  node server.js
-   Odpri:   http://localhost:3000/master.html   (voditelj)
-            http://localhost:3000/client.html   (igralci)
+   Odpri:   http://localhost:3000/master      (voditelj)
+            http://localhost:3000/             (igralci)
    ═══════════════════════════════════════════════════════════ */
 
 const http = require('http');
@@ -94,7 +94,7 @@ const server = http.createServer((req, res) => {
     // API endpoint: QR code as SVG
     if (req.url.startsWith('/api/qr')) {
         const urlObj = new URL(req.url, `http://${req.headers.host}`);
-        const text = urlObj.searchParams.get('url') || `http://${req.headers.host}/client.html`;
+        const text = urlObj.searchParams.get('url') || `http://${req.headers.host}/`;
         try {
             const QRCode = require('qrcode');
             QRCode.toString(text, { type: 'svg', margin: 1, color: { dark: '#0a2e1a', light: '#ffffff' } }, (err, svg) => {
@@ -113,7 +113,19 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    let filePath = req.url === '/' ? '/client.html' : req.url;
+    // Clean URL routing (no .html extensions)
+    const urlPath = req.url.split('?')[0];
+    const routes = {
+        '/': '/client.html',
+        '/client': '/client.html',
+        '/master': '/master.html',
+    };
+
+    let filePath = routes[urlPath] || urlPath;
+    // If no extension and not a known route, try .html
+    if (!path.extname(filePath) && !routes[urlPath]) {
+        filePath = filePath + '.html';
+    }
     filePath = path.join(__dirname, 'public', filePath);
 
     const ext = path.extname(filePath);
@@ -565,7 +577,7 @@ server.listen(PORT, () => {
     console.log(`\n  ╔══════════════════════════════════════╗`);
     console.log(`  ║   KVIZ SERVER                        ║`);
     console.log(`  ╠══════════════════════════════════════╣`);
-    console.log(`  ║   Voditelj:  http://localhost:${PORT}/master.html`);
-    console.log(`  ║   Igralci:   http://localhost:${PORT}/client.html`);
+    console.log(`  ║   Voditelj:  http://localhost:${PORT}/master`);
+    console.log(`  ║   Igralci:   http://localhost:${PORT}/`);
     console.log(`  ╚══════════════════════════════════════╝\n`);
 });
