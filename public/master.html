@@ -630,6 +630,7 @@
 
         if (msg.type === 'reset_ack') {
             showScreen('screenLobby');
+            $('playerList').innerHTML = '';
             $('pCount').textContent = msg.playerCount;
             $('btnStart').disabled = msg.playerCount < 1;
         }
