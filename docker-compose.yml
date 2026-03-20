@@ -6,10 +6,13 @@ services:
       - "3000"
     labels:
       - "traefik.enable=true"
-      # HTTP router
+      # HTTPS router
       - "traefik.http.routers.kviz.rule=Host(`kahoot.mihaperpar.com`)"
       - "traefik.http.routers.kviz.entrypoints=websecure"
       - "traefik.http.routers.kviz.tls.certresolver=letsencrypt"
+      # HTTP router (needed for ACME challenge + redirect)
+      - "traefik.http.routers.kviz-http.rule=Host(`kahoot.mihaperpar.com`)"
+      - "traefik.http.routers.kviz-http.entrypoints=web"
       # Service
       - "traefik.http.services.kviz.loadbalancer.server.port=3000"
     networks:
