@@ -412,8 +412,9 @@
             <div class="timer-select">
                 <span class="timer-select-label">Čas za odgovor:</span>
                 <div class="timer-options" id="timerOptions">
+                    <button class="timer-opt active" id="timerDefault" data-sec="15">Privzeto (15s)</button>
                     <button class="timer-opt" data-sec="10">10s</button>
-                    <button class="timer-opt active" data-sec="15">15s</button>
+                    <button class="timer-opt" data-sec="15">15s</button>
                     <button class="timer-opt" data-sec="20">20s</button>
                     <button class="timer-opt" data-sec="30">30s</button>
                 </div>
@@ -475,6 +476,7 @@
     let timerInterval = null;
     let timerLeft = 0;
     let timerSeconds = 15;
+    let latestOptionCounts = null;
 
     // ── WebSocket connect ──
     function connect() {
@@ -527,6 +529,14 @@
             questions = msg.config.questions;
             timerSeconds = msg.config.timerSeconds;
             $('pCount').textContent = Object.keys(msg.players).length;
+
+            // Set default timer button from config
+            const defBtn = $('timerDefault');
+            defBtn.dataset.sec = timerSeconds;
+            defBtn.textContent = `Privzeto (${timerSeconds}s)`;
+            selectedTimer = timerSeconds;
+            document.querySelectorAll('.timer-opt').forEach(b => b.classList.remove('active'));
+            defBtn.classList.add('active');
 
             // Re-render lobby players
             $('playerList').innerHTML = '';
@@ -596,7 +606,8 @@
         if (msg.type === 'answer_update') {
             $('answeredCount').textContent = msg.answeredCount;
             $('totalPlayers').textContent = msg.totalPlayers;
-            updateOptionCounts(msg.optionCounts);
+            // Store counts but don't show yet — revealed only on answer reveal
+            latestOptionCounts = msg.optionCounts;
         }
 
         if (msg.type === 'time_up') {
